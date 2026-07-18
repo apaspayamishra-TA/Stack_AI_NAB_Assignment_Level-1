@@ -33,6 +33,8 @@ export default function App() {
   const [mergedData, setMergedData] = useState<MergedSalesRecord[] | null>(null);
   const [missingStoreIds, setMissingStoreIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isSimulatingLoad, setIsSimulatingLoad] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   // Active Tab State (Upload, Dashboard, Insights, Export)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'insights' | 'export' | 'upload'>('upload');
@@ -46,45 +48,59 @@ export default function App() {
 
   // Load and merge files
   const handleDataLoaded = (sales: WeeklySalesRecord[], stores: StoreMasterRecord[]) => {
-    setWeeklySales(sales);
-    setStoreMaster(stores);
+    setIsSimulatingLoad(true);
+    setLoadingMessage('Parsing Microsoft Excel workbook assets...');
 
-    // Create quick lookup for store master data
-    const storesMap = new Map<string, StoreMasterRecord>();
-    stores.forEach((s) => storesMap.set(s.store_id, s));
+    setTimeout(() => {
+      setLoadingMessage('Executing relational joins on matching Store IDs...');
 
-    // Identify missing store IDs
-    const missingIdsSet = new Set<string>();
-    const merged: MergedSalesRecord[] = sales.map((sale) => {
-      const storeId = sale.store_id;
-      const store = storesMap.get(storeId);
+      setTimeout(() => {
+        setLoadingMessage('Calibrating logistics stockout risks & margin metrics...');
 
-      if (!store) {
-        missingIdsSet.add(storeId);
-        return {
-          ...sale,
-          master_store_name: `Unknown Store (${storeId})`,
-          master_region: 'Unknown',
-          master_city: 'Unknown',
-          master_store_format: 'Unknown',
-          'Is Store Missing': true,
-        };
-      }
+        setTimeout(() => {
+          setWeeklySales(sales);
+          setStoreMaster(stores);
 
-      return {
-        ...sale,
-        master_store_name: store.store_name,
-        master_region: store.region,
-        master_city: store.city,
-        master_store_format: store.store_format,
-        'Is Store Missing': false,
-      };
-    });
+          // Create quick lookup for store master data
+          const storesMap = new Map<string, StoreMasterRecord>();
+          stores.forEach((s) => storesMap.set(s.store_id, s));
 
-    setMergedData(merged);
-    setMissingStoreIds(Array.from(missingIdsSet).sort());
-    setIsLoaded(true);
-    setActiveTab('dashboard'); // Automatically switch to dashboard view
+          // Identify missing store IDs
+          const missingIdsSet = new Set<string>();
+          const merged: MergedSalesRecord[] = sales.map((sale) => {
+            const storeId = sale.store_id;
+            const store = storesMap.get(storeId);
+
+            if (!store) {
+              missingIdsSet.add(storeId);
+              return {
+                ...sale,
+                master_store_name: `Unknown Store (${storeId})`,
+                master_region: 'Unknown',
+                master_city: 'Unknown',
+                master_store_format: 'Unknown',
+                'Is Store Missing': true,
+              };
+            }
+
+            return {
+              ...sale,
+              master_store_name: store.store_name,
+              master_region: store.region,
+              master_city: store.city,
+              master_store_format: store.store_format,
+              'Is Store Missing': false,
+            };
+          });
+
+          setMergedData(merged);
+          setMissingStoreIds(Array.from(missingIdsSet).sort());
+          setIsLoaded(true);
+          setIsSimulatingLoad(false);
+          setActiveTab('dashboard'); // Automatically switch to dashboard view
+        }, 400);
+      }, 400);
+    }, 400);
   };
 
   // Instant demo dataset loader
@@ -153,19 +169,67 @@ export default function App() {
   }, [mergedData, selectedWeek, selectedRegion, selectedStoreFormat, selectedCategory, searchStoreId]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col font-sans" id="app-root">
+    <div className="min-h-screen bg-gray-50/50 flex flex-col font-sans relative" id="app-root">
       {/* Dynamic Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs" id="main-header">
+      <AnimatePresence>
+        {isSimulatingLoad && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4"
+            id="executive-loader-portal"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-slate-100 flex flex-col items-center"
+            >
+              <div className="relative mb-6">
+                <div className="w-16 h-16 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-indigo-600 animate-pulse" />
+                </div>
+              </div>
+              <h3 className="text-slate-900 font-sans font-extrabold text-base mb-1 tracking-tight">
+                Retail Sales Intelligence
+              </h3>
+              <span className="text-[10px] font-mono font-bold tracking-widest text-sky-600 uppercase mb-4 block">
+                Enterprise Analytics Sandbox
+              </span>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-3">
+                <motion.div
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 1.1, ease: "easeInOut" }}
+                  className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full"
+                />
+              </div>
+              <p className="text-gray-500 font-medium font-sans text-xs animate-pulse">
+                {loadingMessage || 'Assembling Retail Sandboxes...'}
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <header className="bg-white border-b border-gray-150 sticky top-0 z-40 shadow-xs" id="main-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600 rounded-xl text-white">
+            <div className="p-2 bg-gradient-to-tr from-sky-600 to-emerald-600 rounded-xl text-white shadow-xs">
               <BarChart3 className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-gray-900 font-sans font-semibold text-sm tracking-tight block leading-none">
-                Retail Sales Intelligence
-              </span>
-              <span className="text-[10px] text-gray-400 block font-medium mt-1 font-mono uppercase tracking-wide">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-900 font-sans font-bold text-sm tracking-tight block leading-none">
+                  Retail Sales Intelligence
+                </span>
+                <span className="text-[9px] bg-sky-50 border border-sky-100 text-sky-700 font-bold px-1.5 py-0.5 rounded-md font-mono leading-none uppercase tracking-wider">
+                  v2.5.0-PRO
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 block font-bold mt-1.5 font-mono uppercase tracking-widest leading-none">
                 {isLoaded ? 'Dashboard Live' : 'Session Pending'}
               </span>
             </div>
@@ -173,11 +237,11 @@ export default function App() {
 
           {/* Navigation Menu (Enabled only after data load) */}
           {isLoaded && (
-            <nav className="hidden md:flex bg-gray-50 p-1 border border-gray-100 rounded-xl" id="nav-tabs">
+            <nav className="hidden md:flex bg-slate-50 p-1 border border-slate-100 rounded-xl" id="nav-tabs">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  activeTab === 'dashboard' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  activeTab === 'dashboard' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-950'
                 }`}
                 id="tab-btn-dashboard"
               >
@@ -186,8 +250,8 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('insights')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  activeTab === 'insights' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  activeTab === 'insights' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-950'
                 }`}
                 id="tab-btn-insights"
               >
@@ -196,8 +260,8 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('export')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  activeTab === 'export' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  activeTab === 'export' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-950'
                 }`}
                 id="tab-btn-export"
               >
@@ -206,8 +270,8 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('upload')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  activeTab === 'upload' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  activeTab === 'upload' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-950'
                 }`}
                 id="tab-btn-upload"
               >
@@ -221,7 +285,7 @@ export default function App() {
           {isLoaded && (
             <button
               onClick={handleResetSession}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-rose-100 hover:border-rose-200 bg-white text-rose-600 hover:text-rose-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-rose-100 hover:border-rose-200 bg-white text-rose-600 hover:text-rose-700 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-xs"
               id="reset-session-btn"
             >
               <span>Reset Session</span>
@@ -318,15 +382,16 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start" id="dashboard-tab-view">
                   {/* Sidebar Filters Column (Desktop Sticky Sidebar) */}
                   <div className="lg:col-span-1" id="sidebar-filters-container">
-                    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs flex flex-col gap-4 sticky top-24" id="filters-panel">
-                      <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-                        <div className="flex items-center gap-2 text-gray-900 font-semibold text-xs">
-                          <Filter className="h-4 w-4 text-indigo-500" />
-                          <span>Sidebar Filters & Slicers</span>
+                    <div className="bg-white border border-gray-150 rounded-2xl p-6 shadow-xs flex flex-col gap-4 sticky top-24 relative overflow-hidden" id="filters-panel">
+                      <div className="absolute top-0 left-0 w-[4px] h-full bg-sky-500"></div>
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 pl-2">
+                        <div className="flex items-center gap-2 text-slate-900 font-bold text-xs font-sans uppercase tracking-wider">
+                          <Filter className="h-4 w-4 text-sky-600" />
+                          <span>Sidebar Filters</span>
                         </div>
                         <button
                           onClick={handleResetFilters}
-                          className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-xs font-semibold cursor-pointer transition-colors"
+                          className="flex items-center gap-1 text-sky-600 hover:text-sky-800 text-xs font-bold cursor-pointer transition-colors"
                           id="reset-filters-btn"
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -334,14 +399,14 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 text-xs" id="filters-row">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 text-xs pl-2" id="filters-row">
                         {/* Filter: Week selector */}
                         <div className="space-y-1.5">
-                          <label className="text-gray-500 font-bold block">Week</label>
+                          <label className="text-slate-500 font-bold block">Reporting Week</label>
                           <select
                             value={selectedWeek}
                             onChange={(e) => setSelectedWeek(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-xs font-sans text-xs"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-xs font-sans text-xs font-medium"
                             id="filter-week-select"
                           >
                             <option value="All">All Weeks ({filterDimensions.weeks.length})</option>
@@ -355,11 +420,11 @@ export default function App() {
 
                         {/* Filter: Region Selector */}
                         <div className="space-y-1.5">
-                          <label className="text-gray-500 font-bold block">Region</label>
+                          <label className="text-slate-500 font-bold block">Territory Region</label>
                           <select
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-xs font-sans text-xs"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-xs font-sans text-xs font-medium"
                             id="filter-region-select"
                           >
                             <option value="All">All Regions ({filterDimensions.regions.length})</option>
@@ -373,11 +438,11 @@ export default function App() {
 
                         {/* Filter: Store Selector */}
                         <div className="space-y-1.5">
-                          <label className="text-gray-500 font-bold block">Store</label>
+                          <label className="text-slate-500 font-bold block">Retail Store Node</label>
                           <select
                             value={searchStoreId}
                             onChange={(e) => setSearchStoreId(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-xs font-sans text-xs"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-xs font-sans text-xs font-medium"
                             id="filter-store-select"
                           >
                             <option value="All">All Stores ({filterDimensions.storesList.length})</option>
@@ -391,11 +456,11 @@ export default function App() {
 
                         {/* Filter: Store Format Selector */}
                         <div className="space-y-1.5">
-                          <label className="text-gray-500 font-bold block">Store Format</label>
+                          <label className="text-slate-500 font-bold block">Store Format</label>
                           <select
                             value={selectedStoreFormat}
                             onChange={(e) => setSelectedStoreFormat(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-xs font-sans text-xs"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-xs font-sans text-xs font-medium"
                             id="filter-store-format-select"
                           >
                             <option value="All">All Formats ({filterDimensions.storeFormats.length})</option>
@@ -409,11 +474,11 @@ export default function App() {
 
                         {/* Filter: Product Category Selector */}
                         <div className="space-y-1.5">
-                          <label className="text-gray-500 font-bold block">Product Category</label>
+                          <label className="text-slate-500 font-bold block">Product Category</label>
                           <select
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-xs font-sans text-xs"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-xs font-sans text-xs font-medium"
                             id="filter-category-select"
                           >
                             <option value="All">All Categories ({filterDimensions.categories.length})</option>
@@ -427,10 +492,10 @@ export default function App() {
                       </div>
 
                       {/* Filter statistics indicator */}
-                      <div className="flex items-start gap-2 text-gray-400 text-[10px] mt-1 pt-3 border-t border-gray-100" id="filter-state-summary">
-                        <Info className="h-3.5 w-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2 text-slate-400 text-[10px] mt-1 pt-3 border-t border-slate-100 pl-2" id="filter-state-summary">
+                        <Info className="h-3.5 w-3.5 text-sky-500 shrink-0 mt-0.5" />
                         <span className="leading-relaxed">
-                          Showing <span className="font-semibold text-gray-700">{filteredData.length.toLocaleString()}</span> metrics out of <span className="font-semibold text-gray-700">{mergedData?.length.toLocaleString()}</span> entries.
+                          Filtered to <span className="font-extrabold text-slate-700">{filteredData.length.toLocaleString()}</span> metrics out of <span className="font-bold text-slate-500">{mergedData?.length.toLocaleString()}</span> entries.
                         </span>
                       </div>
                     </div>

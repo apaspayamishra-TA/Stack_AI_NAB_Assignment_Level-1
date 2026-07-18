@@ -1,12 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MergedSalesRecord } from '../types';
-import { Download, Printer, FileSpreadsheet, ArrowUpRight, CheckCircle2, RefreshCw, Layers } from 'lucide-react';
+import { Download, Printer, FileSpreadsheet, ArrowUpRight, CheckCircle2, RefreshCw, Layers, FileDown, AlertCircle } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface ExportViewProps {
   data: MergedSalesRecord[];
 }
 
 export default function ExportView({ data }: ExportViewProps) {
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfSuccess, setPdfSuccess] = useState(false);
+
   // Aggregate summary data for the printable report
   const summary = useMemo(() => {
     if (data.length === 0) return null;
@@ -42,6 +48,316 @@ export default function ExportView({ data }: ExportViewProps) {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportPDF = async () => {
+    if (!summary) {
+      setPdfError('No data available to generate report.');
+      return;
+    }
+
+    try {
+      setIsGeneratingPDF(true);
+      setPdfError(null);
+      setPdfSuccess(false);
+
+      // Safe dynamic module resolution for ESM/CJS interop
+      let jsPDFClass = jsPDF;
+      if (!jsPDFClass || typeof jsPDFClass !== 'function') {
+        jsPDFClass = (jsPDF as any).default || (window as any).jsPDF;
+      }
+
+      if (typeof jsPDFClass !== 'function') {
+        throw new Error('jsPDF library failed to resolve as a valid constructor.');
+      }
+
+      // We'll generate a beautiful, native vector PDF report directly in jsPDF!
+      // This is incredibly robust, works in any sandboxed iframe (even with cross-origin font/css taints),
+      // and produces an executive-ready vector document with searchable text.
+      const pdf = new jsPDFClass({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      // Page dimensions
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
+      // Draw background decorative elements / border
+      pdf.setDrawColor(243, 244, 246); // gray-100
+      pdf.setLineWidth(1);
+      pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+
+      // Document Header
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(20);
+      pdf.setTextColor(17, 24, 39); // gray-900
+      pdf.text('RETAIL SALES PERFORMANCE BRIEF', pageWidth / 2, 28, { align: 'center' });
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.setTextColor(107, 114, 128); // gray-500
+      pdf.text('EXECUTIVE AUDIT & INTEL SUMMARY', pageWidth / 2, 34, { align: 'center' });
+
+      // Accent Line
+      pdf.setDrawColor(79, 70, 229); // indigo-600
+      pdf.setLineWidth(1.2);
+      pdf.line(pageWidth / 2 - 15, 39, pageWidth / 2 + 15, 39);
+
+      // Metadata Grid
+      pdf.setFontSize(8.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(75, 85, 99); // gray-600
+      pdf.text('Date Generated:', 20, 50);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), 55, 50);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(75, 85, 99);
+      pdf.text('Dataset Scope:', 20, 56);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(`${summary.recordsCount.toLocaleString()} Week-Category records`, 55, 56);
+
+      // Divider line
+      pdf.setDrawColor(229, 231, 235); // gray-200
+      pdf.setLineWidth(0.3);
+      pdf.line(20, 63, pageWidth - 20, 63);
+
+      // Section 1: Financial Performance
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(67, 56, 202); // indigo-700
+      pdf.text('1. Key Financial & Target Ratios', 20, 72);
+
+      // Draw 3 neat KPI Card blocks
+      const cardWidth = 52;
+      const cardHeight = 26;
+      const cardY = 78;
+
+      // Card 1: Net Sales
+      pdf.setFillColor(249, 250, 251); // gray-50
+      pdf.rect(20, cardY, cardWidth, cardHeight, 'F');
+      pdf.setDrawColor(229, 231, 235);
+      pdf.setLineWidth(0.2);
+      pdf.rect(20, cardY, cardWidth, cardHeight, 'D');
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('NET SALES REVENUE', 20 + cardWidth / 2, cardY + 6, { align: 'center' });
+      
+      pdf.setFontSize(13);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(`$${summary.totalNetSales.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, 20 + cardWidth / 2, cardY + 14, { align: 'center' });
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text(`Gross: $${summary.totalGrossSales.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, 20 + cardWidth / 2, cardY + 21, { align: 'center' });
+
+      // Card 2: Target Achievement
+      const card2X = 20 + cardWidth + 7;
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(card2X, cardY, cardWidth, cardHeight, 'F');
+      pdf.rect(card2X, cardY, cardWidth, cardHeight, 'D');
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('TARGET ACHIEVEMENT', card2X + cardWidth / 2, cardY + 6, { align: 'center' });
+      
+      pdf.setFontSize(13);
+      const achievesTarget = summary.targetAchievement >= 100;
+      pdf.setTextColor(achievesTarget ? 4 : 180, achievesTarget ? 120 : 83, achievesTarget ? 87 : 9); // green or amber
+      pdf.text(`${summary.targetAchievement.toFixed(1)}%`, card2X + cardWidth / 2, cardY + 14, { align: 'center' });
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text(`Quota: $${summary.totalSalesTarget.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, card2X + cardWidth / 2, cardY + 21, { align: 'center' });
+
+      // Card 3: Avg Transaction Value
+      const card3X = card2X + cardWidth + 7;
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(card3X, cardY, cardWidth, cardHeight, 'F');
+      pdf.rect(card3X, cardY, cardWidth, cardHeight, 'D');
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('AVG TICKET SIZE', card3X + cardWidth / 2, cardY + 6, { align: 'center' });
+      
+      pdf.setFontSize(13);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(`$${summary.atv.toFixed(2)}`, card3X + cardWidth / 2, cardY + 14, { align: 'center' });
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text(`From ${summary.totalTransactions.toLocaleString()} orders`, card3X + cardWidth / 2, cardY + 21, { align: 'center' });
+
+      // Section 2: Supply Chain Metrics
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(67, 56, 202); // indigo-700
+      pdf.text('2. Supply Chain & Operational Indicators', 20, 116);
+
+      const cardY2 = 122;
+
+      // Card 1: Units Sold
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(20, cardY2, cardWidth, cardHeight, 'F');
+      pdf.rect(20, cardY2, cardWidth, cardHeight, 'D');
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('TOTAL UNITS SOLD', 20 + cardWidth / 2, cardY2 + 6, { align: 'center' });
+      
+      pdf.setFontSize(13);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(summary.totalUnits.toLocaleString(), 20 + cardWidth / 2, cardY2 + 14, { align: 'center' });
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text('Shipped items count', 20 + cardWidth / 2, cardY2 + 21, { align: 'center' });
+
+      // Card 2: Stockouts
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(card2X, cardY2, cardWidth, cardHeight, 'F');
+      pdf.rect(card2X, cardY2, cardWidth, cardHeight, 'D');
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('STOCKOUT EVENTS', card2X + cardWidth / 2, cardY2 + 6, { align: 'center' });
+      
+      pdf.setFontSize(13);
+      const stockoutsExist = summary.totalStockouts > 0;
+      pdf.setTextColor(stockoutsExist ? 225 : 17, stockoutsExist ? 29 : 24, stockoutsExist ? 72 : 39); // red or black
+      pdf.text(`${summary.totalStockouts} times`, card2X + cardWidth / 2, cardY2 + 14, { align: 'center' });
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text('Supply leakage occurrences', card2X + cardWidth / 2, cardY2 + 21, { align: 'center' });
+
+      // Card 3: Satisfaction
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(card3X, cardY2, cardWidth, cardHeight, 'F');
+      pdf.rect(card3X, cardY2, cardWidth, cardHeight, 'D');
+
+      pdf.setFontSize(7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('AVG STORE RATING', card3X + cardWidth / 2, cardY2 + 6, { align: 'center' });
+      
+      pdf.setFontSize(13);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(`${summary.avgRating.toFixed(2)} / 5.0`, card3X + cardWidth / 2, cardY2 + 14, { align: 'center' });
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text('Weighted user feedback', card3X + cardWidth / 2, cardY2 + 21, { align: 'center' });
+
+      // Section 3: SWOT Brief
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(67, 56, 202); // indigo-700
+      pdf.text('3. Strategic Overview & SWOT Summary', 20, 160);
+
+      // SWOT layout inside PDF
+      const swotW = 82;
+      const swotH = 18;
+      
+      // Strengths
+      pdf.setFillColor(240, 253, 244); // light green bg
+      pdf.rect(20, 166, swotW, swotH, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(21, 128, 61); // emerald-700
+      pdf.text('STRENGTHS', 24, 171);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(75, 85, 99);
+      pdf.setFontSize(7.5);
+      pdf.text(`Robust net revenue with average rating of ${summary.avgRating.toFixed(1)} stars.`, 24, 176);
+      pdf.text('Consistently high customer retention indicators.', 24, 180);
+
+      // Weaknesses
+      pdf.setFillColor(254, 242, 242); // light red bg
+      pdf.rect(108, 166, swotW, swotH, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(185, 28, 28); // red-700
+      pdf.text('WEAKNESSES', 112, 171);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(75, 85, 99);
+      pdf.setFontSize(7.5);
+      pdf.text(`Stockout leakage of ${summary.totalStockouts} incidents causing revenue drag.`, 112, 176);
+      pdf.text('Estimated lost sales & fulfillment bottlenecks.', 112, 180);
+
+      // Opportunities
+      pdf.setFillColor(239, 246, 255); // light blue bg
+      pdf.rect(20, 189, swotW, swotH, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(29, 78, 216); // blue-700
+      pdf.text('OPPORTUNITIES', 24, 194);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(75, 85, 99);
+      pdf.setFontSize(7.5);
+      pdf.text('Expand high performing formats displaying rating > 4.5.', 24, 199);
+      pdf.text('Automate replenishment thresholds to avoid stockouts.', 24, 203);
+
+      // Threats
+      pdf.setFillColor(255, 251, 235); // light yellow bg
+      pdf.rect(108, 189, swotW, swotH, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(180, 83, 9); // amber-700
+      pdf.text('THREATS', 112, 194);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(75, 85, 99);
+      pdf.setFontSize(7.5);
+      pdf.text('Underperforming stores falling short of sales target.', 112, 199);
+      pdf.text(`Margin shrinkage from elevated returns at $${summary.totalReturns.toLocaleString()}.`, 112, 203);
+
+      // Audit Declaration Section
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text('Audit Declaration', 20, 218);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(107, 114, 128);
+      const decText = 'This report represents a valid joined slice of internal weekly retail transaction parameters combined with master store properties. Calculations are governed by strict database formulas and executed client-side. No external network data sync was involved.';
+      const splitDec = pdf.splitTextToSize(decText, pageWidth - 40);
+      pdf.text(splitDec, 20, 224);
+
+      // Sign-off line
+      pdf.setDrawColor(229, 231, 235);
+      pdf.setLineWidth(0.3);
+      pdf.line(20, 245, pageWidth - 20, 245);
+
+      // Footer
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(156, 163, 175);
+      pdf.text('RSI EXECUTIVE REPORT BRIEF', 20, 252);
+      pdf.text('CONFIDENTIAL - FOR INTERNAL AUDITS ONLY', pageWidth - 20, 252, { align: 'right' });
+
+      // Save PDF file to disk
+      pdf.save(`RSI_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 4000);
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      const details = err?.message || String(err);
+      setPdfError(`Failed to generate PDF report: ${details}. Please use the standard browser Print button below as a reliable alternative.`);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   // Convert currently filtered dataset to CSV
@@ -171,9 +487,9 @@ export default function ExportView({ data }: ExportViewProps) {
               <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider">Executive PDF Report</span>
               <Printer className="h-5 w-5 text-emerald-500" />
             </div>
-            <h3 className="text-gray-900 font-sans font-medium text-base mb-1">Print PDF Executive Summary</h3>
+            <h3 className="text-gray-900 font-sans font-medium text-base mb-1">Print or Save PDF Executive Summary</h3>
             <p className="text-gray-500 text-xs leading-relaxed">
-              Print or save a beautifully styled executive report to your local drive. This generates a high-contrast, clean-margined PDF preview containing critical KPIs, target ratios, and marketing efficiencies.
+              Compile and download a beautifully formatted executive report PDF containing critical financial KPIs, supply chain ratios, and a declaration summary.
             </p>
             <div className="mt-4 flex gap-4 text-[10px] text-gray-400 font-mono bg-gray-50 p-2.5 rounded-lg border border-gray-100">
               <div>
@@ -185,15 +501,56 @@ export default function ExportView({ data }: ExportViewProps) {
                 <span className="font-bold text-gray-800">KPI Ratios + SWOT Brief</span>
               </div>
             </div>
+
+            {/* Success and Error Indicators */}
+            {pdfSuccess && (
+              <div className="mt-3.5 flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2 font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>PDF report generated and downloaded successfully!</span>
+              </div>
+            )}
+            {pdfError && (
+              <div className="mt-3.5 flex items-center gap-1.5 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2 font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span className="truncate">{pdfError}</span>
+              </div>
+            )}
           </div>
-          <button
-            onClick={handlePrint}
-            className="mt-6 flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-xs"
-            id="pdf-download-btn"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print or Save to PDF</span>
-          </button>
+
+          <div className="mt-6 space-y-2.5">
+            <button
+              onClick={handleExportPDF}
+              disabled={isGeneratingPDF}
+              className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all shadow-xs ${
+                isGeneratingPDF 
+                  ? 'bg-emerald-500/80 text-white cursor-not-allowed' 
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+              id="pdf-download-btn"
+            >
+              {isGeneratingPDF ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Compiling High-Res PDF...</span>
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4" />
+                  <span>Download PDF Report</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handlePrint}
+              disabled={isGeneratingPDF}
+              className="flex items-center justify-center gap-2 w-full py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+              id="browser-print-btn"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>Use Browser Print Dialog</span>
+            </button>
+          </div>
         </div>
       </div>
 

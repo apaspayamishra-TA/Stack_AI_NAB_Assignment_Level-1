@@ -102,7 +102,7 @@ export default function BusinessInsights({ data }: BusinessInsightsProps) {
         returnRate: (retAmount / sales) * 100
       };
     });
-    const highestReturnCategory = [...categoryReturnsRates].sort((a, b) => b.returnsAmount - a.returnsAmount)[0] || null;
+    const highestReturnCategory = [...categoryReturnsRates].sort((a, b) => b.returnRate - a.returnRate)[0] || null;
 
     // Stores below target
     const storesBelowTarget = storePerformanceList.filter((s) => s.sales < s.target);
@@ -116,6 +116,9 @@ export default function BusinessInsights({ data }: BusinessInsightsProps) {
 
     // Estimated lost sales from stockouts: $45 per incident average
     const estimatedOosLoss = totalStockouts * 45;
+
+    const top5Stores = sortedStoresBySales.slice(0, 5);
+    const highestStockoutStores = [...storePerformanceList].sort((a, b) => b.stockouts - a.stockouts).slice(0, 5);
 
     return {
       totalNetSales,
@@ -142,6 +145,8 @@ export default function BusinessInsights({ data }: BusinessInsightsProps) {
       worstRegion,
       highestReturnCategory,
       storesBelowTarget,
+      top5Stores,
+      highestStockoutStores,
       mostStockoutsStore: [...storePerformanceList].sort((a, b) => b.stockouts - a.stockouts)[0] || null,
       storeCount: storePerformanceList.length
     };
@@ -310,6 +315,112 @@ export default function BusinessInsights({ data }: BusinessInsightsProps) {
               </p>
             </div>
             <div className="text-[10px] text-orange-700 font-bold mt-2 pt-2 border-t border-orange-100/40">⚠ Operational quota warning</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Store Intelligence Panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="dynamic-store-intelligence-panels">
+        {/* Top 5 Performing Stores */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs" id="top-5-performing-stores">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+            <h4 className="text-gray-900 font-sans font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              🏆 Top 5 Performing Stores
+            </h4>
+            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold">By Net Sales</span>
+          </div>
+          <div className="space-y-3.5">
+            {stats.top5Stores.map((s, idx) => (
+              <div key={s.id} className="flex justify-between items-center text-xs">
+                <div>
+                  <div className="font-semibold text-gray-900 flex items-center gap-1">
+                    <span>{idx + 1}. {s.name}</span>
+                    <span className="text-[10px] text-gray-400 font-mono">({s.id})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-mono">
+                    Target Met: <span className={s.achievement >= 100 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-medium'}>{s.achievement.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-gray-900 font-mono">{formatCurrency(s.sales)}</span>
+                  <div className="text-[9px] text-amber-500 font-semibold">{s.avgRating.toFixed(1)} ★</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Highest Stockout Risk Stores */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs" id="highest-stockout-risk-stores">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+            <h4 className="text-gray-900 font-sans font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              🚨 Highest Stockout Risk Stores
+            </h4>
+            <span className="text-[10px] font-mono text-rose-700 bg-rose-50 px-2 py-0.5 rounded font-bold">By Incidents</span>
+          </div>
+          <div className="space-y-3.5">
+            {stats.highestStockoutStores.map((s, idx) => {
+              const riskLevel = s.stockouts > 5 ? 'High Risk' : s.stockouts > 2 ? 'Medium Risk' : 'Low Risk';
+              const riskColor = riskLevel === 'High Risk' ? 'text-rose-700 font-bold bg-rose-50' : riskLevel === 'Medium Risk' ? 'text-amber-700 font-semibold bg-amber-50' : 'text-emerald-700 font-medium bg-emerald-50';
+              return (
+                <div key={s.id} className="flex justify-between items-center text-xs">
+                  <div>
+                    <div className="font-semibold text-gray-900 flex items-center gap-1">
+                      <span>{idx + 1}. {s.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">({s.id})</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500">
+                      Stockouts: <strong className="text-rose-700 font-mono">{s.stockouts}</strong>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full inline-block ${riskColor}`}>{riskLevel}</span>
+                    {s.stockouts > 0 && (
+                      <div className="text-[9px] text-gray-400 font-mono mt-0.5">Est. Loss: ${s.stockouts * 45}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stores Missing Sales Target */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between" id="stores-missing-target-panel">
+          <div>
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+              <h4 className="text-gray-900 font-sans font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                📉 Stores Missing Target
+              </h4>
+              <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-bold">Deficit</span>
+            </div>
+            <div className="space-y-3.5 overflow-y-auto max-h-[180px] pr-1 scrollbar-thin">
+              {stats.storesBelowTarget.length > 0 ? (
+                stats.storesBelowTarget.map((s, idx) => {
+                  const gap = s.target - s.sales;
+                  return (
+                    <div key={s.id} className="flex justify-between items-center text-xs">
+                      <div>
+                        <div className="font-semibold text-gray-900 flex items-center gap-1">
+                          <span>{idx + 1}. {s.name}</span>
+                          <span className="text-[10px] text-gray-400 font-mono">({s.id})</span>
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-mono">
+                          Target: {formatCurrency(s.target)} | Met: <span className="text-rose-600 font-bold">{s.achievement.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <div className="text-right text-rose-600 font-semibold font-mono">
+                        -{formatCurrency(gap)}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-400 text-xs">
+                  🎉 All active stores met or exceeded target!
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

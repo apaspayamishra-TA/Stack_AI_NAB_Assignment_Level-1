@@ -49,10 +49,10 @@ export default function CategoryPerformanceChart({ data }: CategoryPerformanceCh
   // Styling and colors matching the elegant dashboard palette
   const colors: { [key: string]: string } = {
     Grocery: '#059669', // Emerald
-    Apparel: '#ec4899', // Pink
-    Electronics: '#8b5cf6', // Violet
-    Home: '#3b82f6', // Blue
-    General: '#6b7280', // Gray
+    Apparel: '#0ea5e9', // Sky blue
+    Electronics: '#0f766e', // Deep Teal
+    Home: '#3b82f6', // Corporate Blue
+    General: '#64748b', // Slate Gray
   };
 
   const formatYAxis = (val: number) => {
@@ -67,25 +67,25 @@ export default function CategoryPerformanceChart({ data }: CategoryPerformanceCh
       const item = payload[0].payload;
       return (
         <div className="bg-white border border-gray-100 p-3.5 shadow-lg rounded-xl text-xs font-sans">
-          <p className="font-semibold text-gray-900 mb-2 border-b border-gray-50 pb-1 uppercase tracking-wider text-[10px] text-indigo-600">
+          <p className="font-semibold text-slate-900 mb-2 border-b border-gray-50 pb-1 uppercase tracking-wider text-[10px] text-sky-600">
             {item.name} Segment
           </p>
           <div className="space-y-1.5 font-sans">
             <div className="flex justify-between gap-5">
-              <span className="text-gray-500">Net Sales:</span>
-              <span className="font-semibold text-gray-800">${item.sales.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <span className="text-slate-500">Net Sales:</span>
+              <span className="font-semibold text-slate-800">${item.sales.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="flex justify-between gap-5">
-              <span className="text-gray-500">Units Sold:</span>
-              <span className="font-semibold text-gray-800">{item.units.toLocaleString()}</span>
+              <span className="text-slate-500">Units Sold:</span>
+              <span className="font-semibold text-slate-800">{item.units.toLocaleString()}</span>
             </div>
             <div className="flex justify-between gap-5">
-              <span className="text-gray-500">Effective Discount:</span>
+              <span className="text-slate-500">Effective Discount:</span>
               <span className="font-semibold text-amber-600">{item.markdownRate.toFixed(2)}%</span>
             </div>
             <div className="flex justify-between gap-5">
-              <span className="text-gray-500">Avg Ticket Size (ATV):</span>
-              <span className="font-semibold text-indigo-600">${item.atv.toFixed(2)}</span>
+              <span className="text-slate-500">Avg Ticket Size (ATV):</span>
+              <span className="font-semibold text-sky-600">${item.atv.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -94,25 +94,35 @@ export default function CategoryPerformanceChart({ data }: CategoryPerformanceCh
     return null;
   };
 
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-150 p-8 text-center text-slate-500 font-medium" id="category-performance-no-data">
+        <Tags className="h-8 w-8 text-slate-300 mx-auto mb-2 animate-pulse" />
+        No Category Performance Data Available for selected filters
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-xs" id="category-performance-section">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="bg-white rounded-2xl border border-gray-150 p-6 shadow-xs hover:shadow-sm transition-all duration-300 relative overflow-hidden" id="category-performance-section">
+      <div className="absolute top-0 left-0 w-[4px] h-full bg-emerald-500"></div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pl-2">
         <div>
-          <h3 className="text-gray-900 font-sans font-medium text-base flex items-center gap-2">
-            <Tags className="h-5 w-5 text-indigo-500" />
+          <h3 className="text-slate-900 font-sans font-bold text-base flex items-center gap-2">
+            <Tags className="h-5 w-5 text-emerald-600" />
             Category Performance & Markdown Efficiency
           </h3>
-          <p className="text-gray-500 text-xs mt-0.5">
+          <p className="text-slate-500 text-xs mt-0.5">
             Evaluate gross margin splits and promo discount rate impacts by inventory division.
           </p>
         </div>
 
         {/* Metric selection controls */}
-        <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl shrink-0" id="category-metric-controls">
+        <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl shrink-0" id="category-metric-controls">
           <button
             onClick={() => setActiveMetric('sales')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              activeMetric === 'sales' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              activeMetric === 'sales' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="cat-metric-sales"
           >
@@ -120,8 +130,8 @@ export default function CategoryPerformanceChart({ data }: CategoryPerformanceCh
           </button>
           <button
             onClick={() => setActiveMetric('units')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              activeMetric === 'units' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              activeMetric === 'units' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="cat-metric-units"
           >
@@ -129,8 +139,8 @@ export default function CategoryPerformanceChart({ data }: CategoryPerformanceCh
           </button>
           <button
             onClick={() => setActiveMetric('markdown')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              activeMetric === 'markdown' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              activeMetric === 'markdown' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="cat-metric-markdown"
           >
@@ -140,28 +150,31 @@ export default function CategoryPerformanceChart({ data }: CategoryPerformanceCh
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-        {/* Recharts Column */}
+        {/* Recharts Column (Horizontal Bar Chart) */}
         <div className="lg:col-span-8 h-64 w-full" id="category-bar-chart-container">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={categoryMetrics} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+            <BarChart data={categoryMetrics} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
               <XAxis
-                dataKey="name"
-                tickLine={false}
-                axisLine={false}
-                tick={{ fill: '#4b5563', fontSize: 11 }}
-              />
-              <YAxis
+                type="number"
                 tickLine={false}
                 axisLine={false}
                 tick={{ fill: '#9ca3af', fontSize: 10 }}
                 tickFormatter={formatYAxis}
               />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: '#4b5563', fontSize: 11 }}
+                width={80}
+              />
               <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey={activeMetric === 'sales' ? 'sales' : activeMetric === 'units' ? 'units' : 'markdownRate'}
-                radius={[4, 4, 0, 0]}
-                maxBarSize={32}
+                radius={[0, 4, 4, 0]}
+                maxBarSize={20}
               >
                 {categoryMetrics.map((entry, index) => (
                   <Cell

@@ -50,127 +50,140 @@ export default function DashboardOverview({ data }: DashboardOverviewProps) {
     return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
 
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 font-medium mb-6" id="dashboard-overview-no-data">
+        No KPI Data Available for selected filters
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5 mb-6" id="dashboard-overview-container">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" id="kpi-grid">
+    <div className="space-y-6 mb-8" id="dashboard-overview-container">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5" id="kpi-grid">
         {/* Net Sales Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4.5 shadow-xs flex items-center justify-between" id="kpi-card-net-sales">
-          <div className="space-y-1 overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block truncate">Net Sales</span>
-            <span className="text-xl font-sans font-bold text-gray-900 block truncate">
+        <div className="bg-white rounded-2xl border border-gray-150 p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group relative overflow-hidden" id="kpi-card-net-sales">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-sky-500"></div>
+          <div className="space-y-1.5 overflow-hidden">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Net Revenue Sales</span>
+            <span className="text-2xl font-extrabold font-sans text-slate-900 block truncate leading-none">
               {formatCurrency(totalNetSales)}
             </span>
-            <span className="text-[9px] text-gray-400 block font-mono truncate">
-              Gross: {formatCurrency(totalGrossSales)}
+            <span className="text-[10px] text-slate-400 block font-mono truncate">
+              Gross sales: {formatCurrency(totalGrossSales)}
             </span>
           </div>
-          <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600 shrink-0">
+          <div className="p-3 bg-sky-50 text-sky-600 rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-300">
             <DollarSign className="h-5 w-5" />
           </div>
         </div>
 
         {/* Target Achievement Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4.5 shadow-xs flex items-center justify-between" id="kpi-card-target-achievement">
-          <div className="space-y-1 overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block truncate">Target Achievement</span>
-            <span className={`text-xl font-sans font-bold block truncate ${targetAchievement >= 100 ? 'text-emerald-700' : 'text-amber-700'}`}>
+        <div className="bg-white rounded-2xl border border-gray-150 p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group relative overflow-hidden" id="kpi-card-target-achievement">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-emerald-500"></div>
+          <div className="space-y-1.5 overflow-hidden">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Quota Achievement</span>
+            <span className={`text-2xl font-extrabold font-sans block truncate leading-none ${targetAchievement >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
               {targetAchievement.toFixed(1)}%
             </span>
-            <span className="text-[9px] text-gray-400 block font-mono truncate">
-              Target: {formatCurrency(totalSalesTarget)}
+            <span className="text-[10px] text-slate-400 block font-mono truncate">
+              Quota cap: {formatCurrency(totalSalesTarget)}
             </span>
           </div>
-          <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 shrink-0">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-300">
             <Landmark className="h-5 w-5" />
           </div>
         </div>
 
         {/* Average Transaction Value Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4.5 shadow-xs flex items-center justify-between" id="kpi-card-atv">
-          <div className="space-y-1 overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block truncate">Avg Ticket Size</span>
-            <span className="text-xl font-sans font-bold text-gray-900 block truncate">
+        <div className="bg-white rounded-2xl border border-gray-150 p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group relative overflow-hidden" id="kpi-card-atv">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-teal-500"></div>
+          <div className="space-y-1.5 overflow-hidden">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Avg Ticket Value (ATV)</span>
+            <span className="text-2xl font-extrabold font-sans text-slate-900 block truncate leading-none">
               ${atv.toFixed(2)}
             </span>
-            <span className="text-[9px] text-gray-400 block font-mono truncate">
-              Tickets: {formatNumber(totalTransactions)}
+            <span className="text-[10px] text-slate-400 block font-mono truncate">
+              Transactions: {formatNumber(totalTransactions)}
             </span>
           </div>
-          <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600 shrink-0">
+          <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-300">
             <Receipt className="h-5 w-5" />
           </div>
         </div>
 
         {/* Return Rate Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4.5 shadow-xs flex items-center justify-between" id="kpi-card-return-rate">
-          <div className="space-y-1 overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block truncate">Return Rate</span>
-            <span className="text-xl font-sans font-bold text-rose-700 block truncate">
+        <div className="bg-white rounded-2xl border border-gray-150 p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group relative overflow-hidden" id="kpi-card-return-rate">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-rose-500"></div>
+          <div className="space-y-1.5 overflow-hidden">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Merchandise Return Rate</span>
+            <span className="text-2xl font-extrabold font-sans text-rose-600 block truncate leading-none">
               {returnsRatio.toFixed(2)}%
             </span>
-            <span className="text-[9px] text-gray-400 block font-mono truncate">
-              Returns: {formatCurrency(totalReturns)}
+            <span className="text-[10px] text-slate-400 block font-mono truncate">
+              Refund sum: {formatCurrency(totalReturns)}
             </span>
           </div>
-          <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600 shrink-0">
+          <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-300">
             <ShieldAlert className="h-5 w-5" />
           </div>
         </div>
 
         {/* Discount Rate Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4.5 shadow-xs flex items-center justify-between" id="kpi-card-discount-rate">
-          <div className="space-y-1 overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block truncate">Discount Rate</span>
-            <span className="text-xl font-sans font-bold text-amber-700 block truncate">
+        <div className="bg-white rounded-2xl border border-gray-150 p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group relative overflow-hidden" id="kpi-card-discount-rate">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-amber-500"></div>
+          <div className="space-y-1.5 overflow-hidden">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Effective Promo Rate</span>
+            <span className="text-2xl font-extrabold font-sans text-amber-600 block truncate leading-none">
               {avgDiscountRate.toFixed(2)}%
             </span>
-            <span className="text-[9px] text-gray-400 block font-mono truncate">
-              Promo saved: {formatCurrency(totalDiscounts)}
+            <span className="text-[10px] text-slate-400 block font-mono truncate">
+              Discounts: {formatCurrency(totalDiscounts)}
             </span>
           </div>
-          <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600 shrink-0">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl shrink-0 group-hover:scale-110 transition-transform duration-300">
             <Percent className="h-5 w-5" />
           </div>
         </div>
       </div>
 
       {/* Advanced performance & efficiency sub-panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5" id="performance-insights-grid">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="performance-insights-grid">
         {/* Marketing ROI insight */}
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-4 flex justify-between items-center gap-3 shadow-xs" id="marketing-efficiency-panel">
-          <div className="flex gap-2.5 items-center">
-            <div className="p-1.5 bg-emerald-500 rounded-lg text-white">
-              <TrendingUp className="h-4 w-4" />
+        <div className="bg-gradient-to-br from-emerald-50/70 to-teal-50/70 border border-emerald-100/80 rounded-2xl p-5 flex justify-between items-center gap-4 shadow-2xs hover:shadow-xs transition-shadow" id="marketing-efficiency-panel">
+          <div className="flex gap-3 items-start">
+            <div className="p-2 bg-emerald-500 rounded-xl text-white mt-0.5">
+              <TrendingUp className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-emerald-950 font-medium text-xs">Marketing Investment Efficiency</p>
-              <p className="text-emerald-700 text-[10px] leading-relaxed">
-                Total advertising and marketing spend of <span className="font-semibold">{formatCurrency(totalMarketing)}</span> yielded <span className="font-semibold">{formatCurrency(totalNetSales)}</span> in net retail sales.
+              <p className="text-emerald-950 font-sans font-bold text-sm">Marketing Investment Effectiveness (MROI)</p>
+              <p className="text-emerald-800 text-xs mt-1 leading-relaxed max-w-md">
+                An aggregated advertising campaign spend of <span className="font-semibold">{formatCurrency(totalMarketing)}</span> successfully generated <span className="font-semibold">{formatCurrency(totalNetSales)}</span> in net retail sales, providing strong return signals.
               </p>
             </div>
           </div>
-          <div className="shrink-0 bg-white border border-emerald-200 rounded-lg px-3 py-1.5 text-center shadow-xs">
-            <span className="text-emerald-900 font-sans font-bold text-sm block">{marketingRoi.toFixed(1)}x</span>
-            <span className="text-[9px] text-emerald-500 block uppercase tracking-wider font-semibold">Spend ROI</span>
+          <div className="shrink-0 bg-white border border-emerald-200/80 rounded-2xl px-4 py-2.5 text-center shadow-2xs">
+            <span className="text-emerald-700 font-sans font-extrabold text-base block leading-none">{marketingRoi.toFixed(1)}x</span>
+            <span className="text-[9px] text-emerald-500 block uppercase tracking-wider font-bold mt-1 font-mono">Spend ROI</span>
           </div>
         </div>
 
         {/* CSAT / Quality rating impact */}
-        <div className="bg-gradient-to-r from-indigo-50 to-amber-50 border border-indigo-100 rounded-xl p-4 flex justify-between items-center gap-3 shadow-xs" id="csat-summary-panel">
-          <div className="flex gap-2.5 items-center">
-            <div className="p-1.5 bg-indigo-500 rounded-lg text-white">
-              <Landmark className="h-4 w-4" />
+        <div className="bg-gradient-to-br from-sky-50/70 to-indigo-50/70 border border-sky-100/80 rounded-2xl p-5 flex justify-between items-center gap-4 shadow-2xs hover:shadow-xs transition-shadow" id="csat-summary-panel">
+          <div className="flex gap-3 items-start">
+            <div className="p-2 bg-sky-600 rounded-xl text-white mt-0.5">
+              <Landmark className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-indigo-950 font-medium text-xs">Customer Satisfaction Rating</p>
-              <p className="text-indigo-700 text-[10px] leading-relaxed">
-                Overall customer satisfaction is rated at <span className="font-semibold">{avgRating.toFixed(2)} ★</span> based on transactions, with {totalStockouts.toLocaleString()} total stockouts recorded.
+              <p className="text-slate-950 font-sans font-bold text-sm">Customer Satisfaction & Loyalty Impact</p>
+              <p className="text-sky-900 text-xs mt-1 leading-relaxed max-w-md">
+                Active customer satisfaction is validated at <span className="font-semibold">{avgRating.toFixed(2)} ★</span>. Out-of-stocks and logistical delivery bottlenecks remain contained at <span className="font-semibold">{totalStockouts.toLocaleString()} incidents</span>.
               </p>
             </div>
           </div>
-          <div className="shrink-0 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-center shadow-xs">
-            <span className="text-amber-600 font-sans font-bold text-sm block">{avgRating.toFixed(2)}★</span>
-            <span className="text-[9px] text-indigo-500 block uppercase tracking-wider font-semibold">Avg Rating</span>
+          <div className="shrink-0 bg-white border border-sky-200/80 rounded-2xl px-4 py-2.5 text-center shadow-2xs">
+            <span className="text-sky-700 font-sans font-extrabold text-base block leading-none">{avgRating.toFixed(2)}★</span>
+            <span className="text-[9px] text-sky-500 block uppercase tracking-wider font-bold mt-1 font-mono">Avg Score</span>
           </div>
         </div>
       </div>

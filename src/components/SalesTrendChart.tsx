@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -71,6 +71,10 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
     return Object.values(weeksMap).sort((a, b) => a.week.localeCompare(b.week));
   }, [data]);
 
+  const totalRevenue = useMemo(() => {
+    return data.reduce((acc, r) => acc + r.net_sales, 0);
+  }, [data]);
+
   const formatYAxis = (tick: number) => {
     if (tick >= 1e6) return `$${(tick / 1e6).toFixed(1)}M`;
     if (tick >= 1e3) return `$${(tick / 1e3).toFixed(0)}K`;
@@ -81,8 +85,14 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
     if (!val) return '';
     const parts = val.split('-');
     if (parts.length !== 3) return val;
-    // Format YYYY-MM-DD to "Mon YY"
-    const date = new Date(val);
+    
+    // Parse parts as numbers to represent local time (preventing timezone-shift bugs)
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const date = new Date(year, month, day);
+    
+    if (isNaN(date.getTime())) return val;
     return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
   };
 
@@ -118,82 +128,85 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
     return null;
   };
 
-  // Render different Area layers based on selections
-  const renderAreaLayers = () => {
+  // Render different Line layers based on selections
+  const renderLineLayers = () => {
     switch (groupBy) {
       case 'total':
         return (
-          <>
-            <defs>
-              <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="Net Sales"
-              name="Net Sales"
-              stroke="#4f46e5"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorTotal)"
-            />
-          </>
+          <Line
+            type="monotone"
+            dataKey="Net Sales"
+            name="Net Sales"
+            stroke="#0284c7"
+            strokeWidth={3}
+            dot={{ r: 4, strokeWidth: 1 }}
+            activeDot={{ r: 6 }}
+          />
         );
 
       case 'region':
         return (
           <>
-            <Area type="monotone" stackId="1" dataKey="North" name="North Region" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="East" name="East Region" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="South" name="South Region" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="West" name="West Region" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Unknown" name="Unknown Stores" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.15} strokeWidth={1.5} />
+            <Line type="monotone" dataKey="North" name="North Region" stroke="#0369a1" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="East" name="East Region" stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="South" name="South Region" stroke="#0ea5e9" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="West" name="West Region" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Unknown" name="Unknown Stores" stroke="#94a3b8" strokeWidth={2.5} dot={{ r: 3 }} />
           </>
         );
 
       case 'category':
         return (
           <>
-            <Area type="monotone" stackId="1" dataKey="Grocery" name="Grocery" stroke="#059669" fill="#059669" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Apparel" name="Apparel" stroke="#ec4899" fill="#ec4899" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Electronics" name="Electronics" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Home" name="Home Decor & DIY" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} strokeWidth={1.5} />
+            <Line type="monotone" dataKey="Grocery" name="Grocery" stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Apparel" name="Apparel" stroke="#0ea5e9" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Electronics" name="Electronics" stroke="#0f766e" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Home" name="Home Decor & DIY" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} />
           </>
         );
 
       case 'format':
         return (
           <>
-            <Area type="monotone" stackId="1" dataKey="Flagship" name="Flagship Stores" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Supercenter" name="Supercenters" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Express" name="Express Hubs" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} strokeWidth={1.5} />
-            <Area type="monotone" stackId="1" dataKey="Mall-Based" name="Mall-Based Boutiques" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.15} strokeWidth={1.5} />
+            <Line type="monotone" dataKey="Flagship" name="Flagship Stores" stroke="#0369a1" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Supercenter" name="Supercenters" stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Express" name="Express Hubs" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="Mall-Based" name="Mall-Based Boutiques" stroke="#0ea5e9" strokeWidth={2.5} dot={{ r: 3 }} />
           </>
         );
     }
   };
 
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-150 p-8 text-center text-slate-500 font-medium mb-6" id="sales-trend-no-data">
+        <TrendingUp className="h-8 w-8 text-slate-300 mx-auto mb-2 animate-pulse" />
+        No Weekly Trend Data Available for selected filters
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-xs mb-6" id="sales-trend-section">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="bg-white rounded-2xl border border-gray-150 p-6 shadow-xs hover:shadow-sm transition-all duration-300 mb-6 relative overflow-hidden" id="sales-trend-section">
+      <div className="absolute top-0 left-0 w-[4px] h-full bg-sky-500"></div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pl-2">
         <div>
-          <h3 className="text-gray-900 font-sans font-medium text-base flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-indigo-500" />
+          <h3 className="text-slate-900 font-sans font-bold text-base flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-sky-600" />
             Performance & Revenue Seasonality Trend
           </h3>
-          <p className="text-gray-500 text-xs mt-0.5">
+          <p className="text-slate-500 text-xs mt-0.5">
             Identify sales spikes, category splits, and store format seasonality curves over time.
+            Total Period Net Sales: <span className="font-extrabold text-sky-700 font-mono">${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           </p>
         </div>
 
         {/* Group Selector Controls */}
-        <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl shrink-0" id="trend-group-controls">
+        <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl shrink-0" id="trend-group-controls">
           <button
             onClick={() => setGroupBy('total')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              groupBy === 'total' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              groupBy === 'total' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="trend-group-total"
           >
@@ -202,8 +215,8 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
           </button>
           <button
             onClick={() => setGroupBy('region')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              groupBy === 'region' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              groupBy === 'region' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="trend-group-region"
           >
@@ -212,8 +225,8 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
           </button>
           <button
             onClick={() => setGroupBy('category')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              groupBy === 'category' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              groupBy === 'category' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="trend-group-category"
           >
@@ -222,8 +235,8 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
           </button>
           <button
             onClick={() => setGroupBy('format')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-              groupBy === 'format' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-500 hover:text-gray-900'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+              groupBy === 'format' ? 'bg-white text-sky-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
             id="trend-group-format"
           >
@@ -235,7 +248,7 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
 
       <div className="h-80 w-full" id="sales-trend-chart-container">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
             <XAxis
               dataKey="week"
@@ -260,8 +273,8 @@ export default function SalesTrendChart({ data }: SalesTrendChartProps) {
               iconSize={8}
               wrapperStyle={{ fontSize: 11, color: '#4b5563' }}
             />
-            {renderAreaLayers()}
-          </AreaChart>
+            {renderLineLayers()}
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>
