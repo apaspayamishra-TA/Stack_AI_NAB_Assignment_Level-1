@@ -1,0 +1,6 @@
+{
+  "name": "Retail Sales Intelligence",
+  "description": "An interactive retail analytics and sales intelligence dashboard that merges weekly sales transactions with store master data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
